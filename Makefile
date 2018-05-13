@@ -36,3 +36,5 @@ clean:
 
 program: $(TARGET).hex
 	avrdude -c linuxspi -p m328p -P /dev//spidev0.0 -U flash:w:$(TARGET).hex:a
+
+.PHONY: all gccversion size clean program
