@@ -1,15 +1,17 @@
-#define F_CPU 8000000UL
+#define F_CPU 1000000UL
 
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdint.h>
 #include <avr/pgmspace.h>
+#include <util/twi.h>
+#include "font.h"
 
 #define LED1 PB0
 #define BUTTON1 PB1
 #define BUTTON2 PB2
 
-#define DISPLAY_ADDRESS 0x3c
+#define DISPLAY_ADDRESS 0x78
 #define AUDIO_ADDRESS 0x58
 
 #define SET_CONTRAST_CONTROL		0x81
@@ -40,6 +42,14 @@
 #define SET_MULTIPLEX_RATIO		0xA8
 #define COMMAND_NO_OPERATION		0xE3
 #define CHARGE_BUMB_SETTING		0x8D
+
+#define ERROR_DELAY_MS 200
+#define ERROR_DISPLAY_INIT 1
+#define ERR_I2C_START 2
+#define ERR_I2C_SLAVE 3
+#define ERR_I2C_TIMEOUT 5
+
+#define I2C_TIMEOUT 5000
 
 const uint8_t ssd1306_init_cmd [] PROGMEM = {
 	SET_DISPLAY_OFF,
@@ -75,6 +85,16 @@ typedef struct {
 
 } display_status;
 
+void signal_error(uint8_t code) {
+	while (code--) {
+		PORTB &= ~(1 << LED1);
+		_delay_ms(ERROR_DELAY_MS);
+		PORTB |= (1 << LED1);
+		_delay_ms(ERROR_DELAY_MS);
+	}
+	_delay_ms(10 * ERROR_DELAY_MS);
+}
+
 void display_update() {
 
 }
@@ -98,19 +118,29 @@ int i2c_start(uint8_t address) {
 	TWCR = (1 << TWINT | 1 << TWSTA | 1 << TWEN);
 	while (!(TWCR & (1 << TWINT))) {
 		timeout++;
-		if (timeout > 100) {
-			return 1;
+		if (timeout > I2C_TIMEOUT) {
+			signal_error(ERR_I2C_TIMEOUT);
+			return ERR_I2C_TIMEOUT;
 		}
+	}
+	if ((TWSR & 0xf8) != TW_START) {
+		signal_error(ERR_I2C_START);
+		return ERR_I2C_START;
 	}
 	timeout = 0;
 	TWDR = address;
 	TWCR = (1 << TWINT | 1 << TWEN);
         while (!(TWCR & (1 << TWINT))) {
                 timeout++;
-                if (timeout > 100) {
-                        return 1;
+                if (timeout > I2C_TIMEOUT) {
+			signal_error(ERR_I2C_TIMEOUT+1);
+			return ERR_I2C_TIMEOUT;
                 }
         }
+	if ((TWSR & 0xf8) != TW_MT_SLA_ACK) {
+		signal_error(ERR_I2C_SLAVE);
+		return ERR_I2C_SLAVE;
+	}
 
 	return 0;
 }
@@ -121,8 +151,9 @@ int i2c_byte(uint8_t data) {
         TWCR = (1 << TWINT | 1 << TWEN);
         while (!(TWCR & (1 << TWINT))) {
                 timeout++;
-                if (timeout > 100) {
-                        return 1;
+                if (timeout > I2C_TIMEOUT) {
+			signal_error(ERR_I2C_TIMEOUT+2);
+			return ERR_I2C_TIMEOUT;
                 }
         }
 	return 0;
@@ -133,14 +164,61 @@ int i2c_stop() {
 	TWCR = 0;
 }
 
-void display_init() {
-	uint8_t tmp;
+void display_gotoxy(uint8_t x, uint8_t y) {
 	i2c_start(DISPLAY_ADDRESS);
 	i2c_byte(0x00);
-	for (tmp = 0; tmp < sizeof(ssd1306_init_cmd); tmp++) {	
-		i2c_byte(pgm_read_byte(&ssd1306_init_cmd[tmp]));
+	i2c_byte(SET_PAGE_START | y);
+	i2c_byte(SET_COLUMN_ADDRESS);
+	i2c_byte(x * 8);
+	i2c_byte(SET_DISPLAY_START_LINE | 0x3f);
+	i2c_stop();
+}
+
+void display_clear() {
+	uint16_t i;
+	display_gotoxy(0, 0);
+	i2c_start(DISPLAY_ADDRESS);
+	i2c_byte(0x40);
+	for (i=0; i < 128<<4; i++) {
+		i2c_byte(0);
 	}
-	
+	i2c_stop();
+}
+
+void display_init() {
+	uint8_t tmp;
+	_delay_ms(500);
+	if (i2c_start(DISPLAY_ADDRESS)) {
+		return;
+	}
+	if (i2c_byte(0x00)) {
+		return;
+	}
+	for (tmp = 0; tmp < sizeof(ssd1306_init_cmd); tmp++) {	
+		if (i2c_byte(pgm_read_byte(&ssd1306_init_cmd[tmp]))) {
+			return;
+		}
+	}
+	display_clear();
+}
+
+display_write_char(uint8_t c) {
+	uint8_t i;
+	i2c_start(DISPLAY_ADDRESS);
+	i2c_byte(0x40);
+	for (i=0; i < 8; i++) {
+		i2c_byte(pgm_read_byte(&font[(unsigned char)c][i]));
+	}
+	i2c_stop();
+}
+
+display_write(char *str) {
+	uint16_t i = 0;
+	while(*str) {
+		display_gotoxy(i, 1);
+		display_write_char(*str++);
+		i++;
+	}
 }
 
 void init() {
@@ -165,6 +243,7 @@ void handle_button1() {
 	}
 }
 
+
 void handle_button2() {
 
 }
@@ -177,9 +256,13 @@ int main(void) {
 
 	init();
 
+	display_write("hello");
+	//signal_error(5);
+
 	while(1) {
-		handle_button1();
-		handle_button2();
+		//handle_button1();
+		//handle_button2();
+		//display_write("hello");
 		drive_led1();
 		display_update();
 	}
