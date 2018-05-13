@@ -4,13 +4,13 @@ OBJCOPY = avr-objcopy
 
 MCU = atmega328p
 
-TARGET = button
+TARGET = audio
 
-SRC = $(TARGET).c
+SRC = $(TARGET).c i2c.c ssd1306.c
 
 OBJ = $(SRC:.c=.o)
 
-ALL_CFLAGS = -mmcu=$(MCU) -Os $(CFLAGS)
+ALL_CFLAGS = -mmcu=$(MCU) -Os $(CFLAGS) -DF_CPU=1000000UL
 
 all: gccversion $(TARGET).elf $(TARGET).hex size
 
