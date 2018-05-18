@@ -3,10 +3,12 @@
 
 #include <stdint.h>
 #include <avr/pgmspace.h>
+#include <stdarg.h>
 #include "i2c.h"
 #include "font.h"
+#include <stdio.h>
 
-#define SSD1306_ADDRESS 0x78
+#define SSD1306_ADDRESS 0x3c
 
 #define SET_CONTRAST_CONTROL		0x81
 #define SET_DISPLAY_ON			0xAF
@@ -41,6 +43,8 @@ void ssd1306_init();
 void ssd1306_clear();
 void ssd1306_gotoxy(uint8_t row, uint8_t column);
 void ssd1306_write_char(uint8_t c);
+void ssd1306_write_number(uint8_t row, uint8_t column, uint8_t number);
 void ssd1306_write(uint8_t row, uint8_t column, char *str);
+void ssd1306_printf(uint8_t row, uint8_t column, char *fmt, ...);
 
 #endif

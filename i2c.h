@@ -16,10 +16,13 @@
 #define ERR_I2C_SLAVE 3
 #define ERR_I2C_TIMEOUT 5
 
+#define I2C_WRITE 0
+#define I2C_READ 1
+
 int	i2c_init();
-int	i2c_start(uint8_t address);
+int	i2c_start(uint8_t address, uint8_t direction);
 int	i2c_write(uint8_t date);
-uint8_t	i2c_read();
+int	i2c_read(uint8_t *data, uint8_t ack);
 int	i2c_stop();
 
 #endif

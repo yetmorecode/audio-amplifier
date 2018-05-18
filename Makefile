@@ -6,7 +6,7 @@ MCU = atmega328p
 
 TARGET = audio
 
-SRC = $(TARGET).c i2c.c ssd1306.c
+SRC = $(TARGET).c i2c.c ssd1306.c tpa2016.c
 
 OBJ = $(SRC:.c=.o)
 
@@ -34,7 +34,7 @@ clean:
 	rm -f $(TARGET).elf
 	rm -f $(OBJ)
 
-program: $(TARGET).hex
+program: all
 	avrdude -c linuxspi -p m328p -P /dev//spidev0.0 -U flash:w:$(TARGET).hex:a
 
 .PHONY: all gccversion size clean program

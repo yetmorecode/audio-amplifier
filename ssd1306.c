@@ -24,7 +24,7 @@ const uint8_t ssd1306_init_cmd [] PROGMEM = {
 };
 
 void ssd1306_gotoxy(uint8_t row, uint8_t column) {
-	i2c_start(SSD1306_ADDRESS);
+	i2c_start(SSD1306_ADDRESS, I2C_WRITE);
 	i2c_write(0x00);
 	i2c_write(SET_PAGE_START | row);
 	i2c_write(SET_COLUMN_ADDRESS);
@@ -36,7 +36,7 @@ void ssd1306_gotoxy(uint8_t row, uint8_t column) {
 void ssd1306_clear() {
 	uint16_t i;
 	ssd1306_gotoxy(0, 0);
-	i2c_start(SSD1306_ADDRESS);
+	i2c_start(SSD1306_ADDRESS, I2C_WRITE);
 	i2c_write(0x40);
 	for (i=0; i < 128<<4; i++) {
 		i2c_write(0);
@@ -47,7 +47,7 @@ void ssd1306_clear() {
 void ssd1306_init() {
 	uint8_t tmp;
 	_delay_ms(500);
-	if (i2c_start(SSD1306_ADDRESS)) {
+	if (i2c_start(SSD1306_ADDRESS, I2C_WRITE)) {
 		return;
 	}
 	if (i2c_write(0x00)) {
@@ -63,13 +63,20 @@ void ssd1306_init() {
 
 void ssd1306_write_char(uint8_t c) {
 	uint8_t i;
-	i2c_start(SSD1306_ADDRESS);
+	i2c_start(SSD1306_ADDRESS, I2C_WRITE);
 	i2c_write(0x40);
 	for (i=0; i < 8; i++) {
 		i2c_write(pgm_read_byte(&font[(unsigned char)c][i]));
 	}
 	i2c_stop();
 }
+
+void ssd1306_write_number(uint8_t row, uint8_t column, uint8_t number) {
+	char buffer[4];
+	itoa(number, buffer, 10);
+	ssd1306_write(row, column, buffer);
+}
+
 
 void ssd1306_write(uint8_t row, uint8_t column, char *str) {
 	uint16_t i = 0;
@@ -78,4 +85,15 @@ void ssd1306_write(uint8_t row, uint8_t column, char *str) {
 		ssd1306_write_char(*str++);
 		i++;
 	}
+}
+
+void ssd1306_printf(uint8_t row, uint8_t column, char *fmt, ...) {
+	va_list ap;
+	char buf[32];
+
+	va_start(ap, fmt);
+	// ssd1306 display can show 16 characters 
+	vsnprintf(buf, 17, fmt, ap);
+	va_end(ap);
+	ssd1306_write(row, column, buf);
 }
