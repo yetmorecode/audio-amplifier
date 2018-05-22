@@ -6,6 +6,6 @@ stages:
 build:
   stage: build
   script:
-    - apt-get update -y && apt-get install -y gcc-avr avrdude build-essential
+    - apt-get update -y && apt-get install -y gcc-avr avrdude avr-libc build-essential
     - make
     - ls -lh
