@@ -1,0 +1,11 @@
+image: debian:9
+
+stages:
+  - build
+  
+build:
+  stage: build
+  script:
+    - apt-get update -y && apt-get install -y gcc-avr avrdude
+    - make
+    - ls -lh
