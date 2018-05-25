@@ -6,7 +6,7 @@ MCU = atmega328p
 
 TARGET = audio
 
-SRC = $(TARGET).c i2c.c ssd1306.c tpa2016.c
+SRC = $(TARGET).c i2c.c ssd1306.c tpa2016.c yamaha_acc5.c
 
 OBJ = $(SRC:.c=.o)
 
