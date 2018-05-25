@@ -28,6 +28,38 @@ tpa2016_control amp = { 0 };
 
 
 int updateDisplay = 0;
+void update_display();
+
+int init() {
+	int i;
+	cc5_init();
+	for (i=0; i < 5; i++) {
+		cc5_led_print(0xff, i);
+		_delay_ms(200);
+	}
+	for (i=5; i > 0; i--) {
+		cc5_led_print(0xff, i);
+		_delay_ms(200);
+	}
+	cc5_led_print(0, 0);
+
+	i2c_init();
+	ssd1306_init();
+	ssd1306_clear();
+	ssd1306_printf(0, 0, "home amplifier");
+	ssd1306_printf(1, 0, "version 1.0");
+	// give tpa2016 some bootup time
+	_delay_ms(50);
+	tpa2016_init(&amp);
+	amp.agc_fixed_gain = 12;
+	amp.max_gain = 0;
+	amp.compression_ratio = 0;
+	tpa2016_set(&amp);
+	updateDisplay = 1;
+	update_display();
+
+	return 0;
+}
 
 void update_display() {
 	if (!updateDisplay) {
@@ -88,26 +120,8 @@ void update_display() {
 int main(void) {
 	int status;
 	int i, count;
-	cc5_init();
-	cc5_led_print(7);
-	_delay_ms(200);
-	cc5_led_print(0);
 
-	i2c_init();
-	ssd1306_init();
-	ssd1306_clear();
-	ssd1306_printf(0, 0, "home amplifier");
-	ssd1306_printf(1, 0, "version 1.0");
-	// give tpa2016 some bootup time
-	_delay_ms(50);
-	tpa2016_init(&amp);
-	amp.agc_fixed_gain = 12;
-	amp.max_gain = 0;
-	amp.compression_ratio = 0;
-	tpa2016_set(&amp);
-	updateDisplay = 1;
-	update_display();
-
+	init();
 
 	count = 0;	
 	while(1) {

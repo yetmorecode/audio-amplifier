@@ -1,13 +1,37 @@
 #include "yamaha_acc5.h"
 
+/*
+ * Some LEDs are controlled through a MC14052B on the ACC5 frontplate
+ */
+static void set_mc14052b(bool a, bool b) {
+	if (a) {
+		CC5_MC14052B_A_PORT |= (1 << CC5_MC14052B_A_PIN);
+	} else {
+		CC5_MC14052B_A_PORT &= ~(1 << CC5_MC14052B_A_PIN);
+	}
+	if (b) {
+		CC5_MC14052B_B_PORT |= (1 << CC5_MC14052B_B_PIN);
+	} else {
+		CC5_MC14052B_B_PORT &= ~(1 << CC5_MC14052B_B_PIN);
+	}
+}
+
 int cc5_init() {
 	CC5_LED_JAZZ_DDR |= (1 << CC5_LED_JAZZ_PIN);
 	CC5_LED_ROCK_DDR |= (1 << CC5_LED_ROCK_PIN);
 	CC5_LED_HALL_DDR |= (1 << CC5_LED_HALL_PIN);
+	CC5_LED_CD_DDR |= (1 << CC5_LED_CD_PIN);
+	CC5_LED_TUNER_DDR |= (1 << CC5_LED_TUNER_PIN);
+	
+	CC5_MC14052B_A_DDR |= (1 << CC5_MC14052B_A_PIN);
+	CC5_MC14052B_B_DDR |= (1 << CC5_MC14052B_B_PIN);
 
 	cc5_disable_led(CC5_LED_JAZZ);
 	cc5_disable_led(CC5_LED_ROCK);
 	cc5_disable_led(CC5_LED_HALL);
+	cc5_disable_led(CC5_LED_CD);
+	cc5_disable_led(CC5_LED_TUNER);
+	set_mc14052b(true, true);
 
 	return 0;
 }
@@ -22,6 +46,31 @@ int cc5_enable_led(int led) {
 			break;
 		case CC5_LED_HALL:
 			CC5_LED_HALL_PORT &= ~(1 << CC5_LED_HALL_PIN);
+			break;
+		case CC5_LED_CD:
+			set_mc14052b(true, true);
+			cc5_disable_led(CC5_LED_TUNER);
+			CC5_LED_CD_PORT |= (1 << CC5_LED_CD_PIN);
+			break;
+		case CC5_LED_TUNER:
+			set_mc14052b(true, true);
+			cc5_disable_led(CC5_LED_CD);
+			CC5_LED_TUNER_PORT &= ~(1 << CC5_LED_TUNER_PIN);
+			break;
+		case CC5_LED_TAPE:
+			cc5_disable_led(CC5_LED_CD);
+			cc5_disable_led(CC5_LED_TUNER);
+			set_mc14052b(false, true);
+			break;
+		case CC5_LED_AUX:
+			cc5_disable_led(CC5_LED_CD);
+			cc5_disable_led(CC5_LED_TUNER);
+			set_mc14052b(false, false);
+			break;
+		case CC5_LED_PHONO:
+			cc5_disable_led(CC5_LED_CD);
+			cc5_disable_led(CC5_LED_TUNER);
+			set_mc14052b(true, false);
 			break;
 	}
 
@@ -39,6 +88,17 @@ int cc5_disable_led(int led) {
 		case CC5_LED_HALL:
 			CC5_LED_HALL_PORT |= (1 << CC5_LED_HALL_PIN);
 			break;
+		case CC5_LED_CD:
+			CC5_LED_CD_PORT &= ~(1 << CC5_LED_CD_PIN);
+			break;
+		case CC5_LED_TUNER:
+			CC5_LED_TUNER_PORT |= (1 << CC5_LED_TUNER_PIN);
+			break;
+		case CC5_LED_AUX:
+		case CC5_LED_TAPE:
+		case CC5_LED_PHONO:
+			set_mc14052b(true, true);
+			break;
 	}
 
 	return 0;
@@ -49,21 +109,46 @@ bool cc5_is_button_pressed(int button) {
 	return false;
 }
 
-int cc5_led_print(int num) {
-	if (num & 0x1) {
+int cc5_led_print(int mode, int input) {
+	int mask = 1;
+	if (mode & mask) {
 		cc5_enable_led(CC5_LED_ROCK);
 	} else {
 		cc5_disable_led(CC5_LED_ROCK);
 	}
-	if (num & 0x2) {
+	mask <<= 1;
+	if (mode & mask) {
 		cc5_enable_led(CC5_LED_JAZZ);
 	} else {
 		cc5_disable_led(CC5_LED_JAZZ);
 	}
-	if (num & 0x4) {
+	mask <<= 1;
+	if (mode & mask) {
 		cc5_enable_led(CC5_LED_HALL);
 	} else {
 		cc5_disable_led(CC5_LED_HALL);
+	}
+
+	switch (input) {
+		case 5:
+			cc5_enable_led(CC5_LED_AUX);
+			break;
+		case 4:
+			cc5_enable_led(CC5_LED_TUNER);
+			break;
+		case 3:
+			cc5_enable_led(CC5_LED_CD);
+			break;
+		case 2:
+			cc5_enable_led(CC5_LED_PHONO);
+			break;
+		case 1:
+			cc5_enable_led(CC5_LED_TAPE);
+			break;
+		case 0:
+		default:
+			cc5_disable_led(CC5_LED_AUX);
+			break;
 	}
 	return 0;
 }

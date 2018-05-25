@@ -38,10 +38,17 @@
 #define CC5_LED_CD_DDR DDRB
 #define CC5_LED_TUNER_DDR DDRB
 
+#define CC5_MC14052B_A_PIN PD3
+#define CC5_MC14052B_B_PIN PD4
+#define CC5_MC14052B_A_PORT PORTD
+#define CC5_MC14052B_B_PORT PORTD
+#define CC5_MC14052B_A_DDR DDRD
+#define CC5_MC14052B_B_DDR DDRD
+
 int 	cc5_init();
 int 	cc5_enable_led(int led);
 int 	cc5_disable_led(int led);
-int	cc5_led_print(int num);
+int	cc5_led_print(int num, int input);
 bool	cc5_is_button_pressed(int button);
 
 #endif
