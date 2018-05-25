@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include "i2c.h"
 #include "font.h"
+#include "font_basic.h"
 #include <stdio.h>
 
 #define SSD1306_ADDRESS 0x3c
