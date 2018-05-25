@@ -17,21 +17,30 @@ static void set_mc14052b(bool a, bool b) {
 }
 
 int cc5_init() {
+	// Setup directly addressed LEDs
 	CC5_LED_JAZZ_DDR |= (1 << CC5_LED_JAZZ_PIN);
 	CC5_LED_ROCK_DDR |= (1 << CC5_LED_ROCK_PIN);
 	CC5_LED_HALL_DDR |= (1 << CC5_LED_HALL_PIN);
 	CC5_LED_CD_DDR |= (1 << CC5_LED_CD_PIN);
 	CC5_LED_TUNER_DDR |= (1 << CC5_LED_TUNER_PIN);
 	
+	// Setup LED multiplexer
 	CC5_MC14052B_A_DDR |= (1 << CC5_MC14052B_A_PIN);
 	CC5_MC14052B_B_DDR |= (1 << CC5_MC14052B_B_PIN);
 
+	// Disable all LEDs initially
 	cc5_disable_led(CC5_LED_JAZZ);
 	cc5_disable_led(CC5_LED_ROCK);
 	cc5_disable_led(CC5_LED_HALL);
 	cc5_disable_led(CC5_LED_CD);
 	cc5_disable_led(CC5_LED_TUNER);
 	set_mc14052b(true, true);
+
+	// Setup buttons with internal pullups
+	CC5_BUTTON_MODE_DDR &= ~(1 << CC5_BUTTON_MODE_PIN);
+	CC5_BUTTON_MODE_WRITE |= (1 << CC5_BUTTON_MODE_PIN);
+	CC5_BUTTON_POWER_DDR &= ~(1 << CC5_BUTTON_POWER_PIN);
+	CC5_BUTTON_POWER_WRITE |= (1 << CC5_BUTTON_POWER_PIN);
 
 	return 0;
 }
@@ -97,6 +106,8 @@ int cc5_disable_led(int led) {
 		case CC5_LED_AUX:
 		case CC5_LED_TAPE:
 		case CC5_LED_PHONO:
+			cc5_disable_led(CC5_LED_CD);
+			cc5_disable_led(CC5_LED_TUNER);
 			set_mc14052b(true, true);
 			break;
 	}
@@ -105,6 +116,23 @@ int cc5_disable_led(int led) {
 }
 
 bool cc5_is_button_pressed(int button) {
+	switch (button) {
+		case CC5_BUTTON_MODE:
+			return !(CC5_BUTTON_MODE_READ & (1 << CC5_BUTTON_MODE_PIN));
+		case CC5_BUTTON_POWER:
+			return !(CC5_BUTTON_POWER_READ & (1 << CC5_BUTTON_POWER_PIN));
+	}
+
+	return false;
+}
+
+bool cc5_is_button_longpressed(int button) {
+	switch (button) {
+		case CC5_BUTTON_MODE:
+			return !(CC5_BUTTON_MODE_READ & (1 << CC5_BUTTON_MODE_PIN));
+		case CC5_BUTTON_POWER:
+			return !(CC5_BUTTON_POWER_READ & (1 << CC5_BUTTON_POWER_PIN));
+	}
 
 	return false;
 }
@@ -146,8 +174,9 @@ int cc5_led_print(int mode, int input) {
 			cc5_enable_led(CC5_LED_TAPE);
 			break;
 		case 0:
-		default:
 			cc5_disable_led(CC5_LED_AUX);
+			break;
+		default:
 			break;
 	}
 	return 0;

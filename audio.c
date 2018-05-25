@@ -3,6 +3,7 @@
 #endif
 
 #include <avr/io.h>
+#include <avr/wdt.h>
 #include <util/delay.h>
 #include <stdint.h>
 #include "i2c.h"
@@ -10,28 +11,32 @@
 #include "tpa2016.h"
 #include "yamaha_acc5.h"
 
-#define ERROR_DELAY_MS 200
-#define ERROR_DISPLAY_INIT 1
+#define soft_reset()        \
+do {                        \
+    wdt_enable(WDTO_15MS);  \
+    for(;;) { }             \
+} while(0)
 
-
-/*
-void handle_button1() {
-	if (!(PINB & (1 << BUTTON1))) {
-		PORTB |= (1 << LED1);
-	} else {
-		PORTB &= ~(1 << LED1);
-	}
-}
-*/
 
 tpa2016_control amp = { 0 };
-
-
 int updateDisplay = 0;
+
+void wdt_init(void) __attribute__((naked)) __attribute__((section(".init3")));
+void wdt_init() {
+    MCUSR = 0;
+    wdt_disable();
+}
+
 void update_display();
 
 int init() {
 	int i;
+
+	// pullup reset pin
+	DDRC |= (1 << PC6);
+	PORTC |= (1 << PC6);
+
+	// init ACC5 frontplate
 	cc5_init();
 	for (i=0; i < 5; i++) {
 		cc5_led_print(0xff, i);
@@ -43,11 +48,15 @@ int init() {
 	}
 	cc5_led_print(0, 0);
 
+	// start I2C
 	i2c_init();
+
+	// start display
 	ssd1306_init();
 	ssd1306_clear();
 	ssd1306_printf(0, 0, "home amplifier");
 	ssd1306_printf(1, 0, "version 1.0");
+
 	// give tpa2016 some bootup time
 	_delay_ms(50);
 	tpa2016_init(&amp);
@@ -117,16 +126,37 @@ void update_display() {
 	updateDisplay = 0;
 }
 
+static int reset = 0;
+void handle_reset() {
+	if (cc5_is_button_pressed(CC5_BUTTON_POWER)) {
+		cc5_enable_led(CC5_LED_CD);
+		reset++;
+	} else {
+		cc5_disable_led(CC5_LED_CD);
+		reset = 0;
+	}
+	if (reset > 10) {
+		soft_reset();
+	}
+}
+
+void handle_mode() {
+	int a;
+	if (cc5_is_button_pressed(CC5_BUTTON_MODE)) {
+		a = 7;
+	} else {
+		a = 0;
+	}
+	cc5_led_print(a, -1);
+}
+
 int main(void) {
-	int status;
-	int i, count;
+	int count = 0;
 
 	init();
-
-	count = 0;	
 	while(1) {
-		//ssd1306_write("hello");
-		count++;
+		handle_reset();
+		handle_mode();
 
 		if (count % 50 == 0) {
 			//amp.speaker_enable_left = !amp.speaker_enable_left;
@@ -136,6 +166,7 @@ int main(void) {
 		}
 
 		update_display();
+		count++;
 		_delay_ms(100);
 	}
 	return 0;

@@ -8,7 +8,15 @@
 #include <stdbool.h>
 
 #define CC5_BUTTON_POWER 1
+#define CC5_BUTTON_POWER_READ PINB
+#define CC5_BUTTON_POWER_WRITE PORTB
+#define CC5_BUTTON_POWER_PIN PB2
+#define CC5_BUTTON_POWER_DDR DDRB
 #define CC5_BUTTON_MODE 2
+#define CC5_BUTTON_MODE_READ PINB
+#define CC5_BUTTON_MODE_WRITE PORTB
+#define CC5_BUTTON_MODE_PIN PB1
+#define CC5_BUTTON_MODE_DDR DDRB
 
 #define CC5_LED_POWER 1
 #define CC5_LED_HALL 2
@@ -50,5 +58,6 @@ int 	cc5_enable_led(int led);
 int 	cc5_disable_led(int led);
 int	cc5_led_print(int num, int input);
 bool	cc5_is_button_pressed(int button);
+bool	cc5_is_button_longpressed(int button);
 
 #endif
