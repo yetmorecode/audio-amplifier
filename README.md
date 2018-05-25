@@ -7,15 +7,15 @@ electricity even in standby. The code drives an Atmega328P and the below listed 
 
 See datasheets directory for IC datasheets.
 
-== TPA2016 amplifier 
+## TPA2016 amplifier 
 
  * Controlled through I2C
 
-== SSD1306 OLED display 
+## SSD1306 OLED display 
 
  * Controlled through I2C
 
-== A-CC5 frontplate 
+## Yamaha A-CC5 frontplate 
 
  * Comes with 9 LEDs
  * .. 2 push buttons 
