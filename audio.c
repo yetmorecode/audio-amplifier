@@ -10,6 +10,7 @@
 #include "ssd1306.h"
 #include "tpa2016.h"
 #include "yamaha_acc5.h"
+#include <avr/power.h>
 
 #define soft_reset()        \
 do {                        \
@@ -38,14 +39,26 @@ int init() {
 
 	// init ACC5 frontplate
 	cc5_init();
-	for (i=0; i < 5; i++) {
-		cc5_led_print(0xff, i);
+	for (i=1; i < 5; i++) {
+		cc5_led_print(7, i);
 		_delay_ms(200);
 	}
 	for (i=5; i > 0; i--) {
-		cc5_led_print(0xff, i);
+		cc5_led_print(7, i);
 		_delay_ms(200);
 	}
+/*
+	cc5_led_print(1, 0);
+	_delay_ms(200);
+	cc5_led_print(2, 0);
+	_delay_ms(200);
+	cc5_led_print(4, 0);
+	_delay_ms(200);
+	cc5_led_print(2, 0);
+	_delay_ms(200);
+	cc5_led_print(1, 0);
+	_delay_ms(200);
+*/
 	cc5_led_print(0, 0);
 
 	// start I2C
@@ -70,6 +83,7 @@ int init() {
 	return 0;
 }
 
+int balance = 0;
 void update_display() {
 	if (!updateDisplay) {
 		return;
@@ -90,7 +104,8 @@ void update_display() {
 	ssd1306_printf(3, 1, 
 		"%s %i / %i dB %s", 
 		amp.speaker_enable_left ? "L" : " ", 
-		(amp.agc_fixed_gain > 30 ? (-36 + (amp.agc_fixed_gain & 0b11111)) : (amp.agc_fixed_gain)),
+		//(amp.agc_fixed_gain > 30 ? (-36 + (amp.agc_fixed_gain & 0b11111)) : (amp.agc_fixed_gain)),
+		balance,
 		18 + amp.max_gain,
 		amp.speaker_enable_right ? "R" : " "
 	);
@@ -150,10 +165,30 @@ void handle_mode() {
 	cc5_led_print(a, -1);
 }
 
+void handle_balance() {
+	int timeout = 0;
+	ADMUX = 0b01100000;
+	ADCSRA |= (1 << ADEN);
+	ADCSRA |= (1 << ADSC);
+	while (ADCSRA & (1 << ADSC)) {
+		if (timeout++ > 100) {
+			balance = 7;
+			return;
+		}
+	}
+	balance = 0xff - ADCH;
+	ADCSRA &= ~(1 << ADEN);
+}
+
 int main(void) {
 	int count = 0;
+	static int last = 0;
 
 	init();
+
+	// enable adc
+	PRR &= ~(1 << PRADC);
+
 	while(1) {
 		handle_reset();
 		handle_mode();
@@ -162,6 +197,12 @@ int main(void) {
 			//amp.speaker_enable_left = !amp.speaker_enable_left;
 			//amp.speaker_enable_right = !amp.speaker_enable_left;
 			//tpa2016_set(&amp);
+			updateDisplay = true;
+		}
+
+		handle_balance();
+		if (balance != last) {
+			last = balance;
 			updateDisplay = true;
 		}
 
