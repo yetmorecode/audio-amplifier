@@ -10,6 +10,7 @@
 #include "ssd1306.h"
 #include "tpa2016.h"
 #include "yamaha_acc5.h"
+#include "timing.h"
 #include <avr/power.h>
 
 #define soft_reset()        \
@@ -32,6 +33,8 @@ void update_display();
 
 int init() {
 	int i;
+
+	timing_init();
 
 	// pullup reset pin
 	DDRC |= (1 << PC6);
@@ -141,16 +144,13 @@ void update_display() {
 	updateDisplay = 0;
 }
 
-static int reset = 0;
 void handle_reset() {
 	if (cc5_is_button_pressed(CC5_BUTTON_POWER)) {
 		cc5_enable_led(CC5_LED_CD);
-		reset++;
 	} else {
 		cc5_disable_led(CC5_LED_CD);
-		reset = 0;
 	}
-	if (reset > 10) {
+	if (cc5_is_button_longpressed(CC5_BUTTON_POWER)) {
 		soft_reset();
 	}
 }
@@ -182,7 +182,7 @@ void handle_balance() {
 
 int main(void) {
 	int count = 0;
-	static int last = 0;
+	static int last = 0, l2 = 0;
 
 	init();
 
@@ -193,22 +193,19 @@ int main(void) {
 		handle_reset();
 		handle_mode();
 
-		if (count % 50 == 0) {
-			//amp.speaker_enable_left = !amp.speaker_enable_left;
-			//amp.speaker_enable_right = !amp.speaker_enable_left;
-			//tpa2016_set(&amp);
-			updateDisplay = true;
-		}
-
 		handle_balance();
 		if (balance != last) {
 			last = balance;
 			updateDisplay = true;
 		}
+		if (t1 != l2) {
+			l2 = t1;
+			updateDisplay = true;
+		}
 
 		update_display();
 		count++;
-		_delay_ms(100);
+		//_delay_ms(100);
 	}
 	return 0;
 }

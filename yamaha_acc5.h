@@ -6,6 +6,7 @@
 
 #include <avr/io.h>
 #include <stdbool.h>
+#include "timing.h"
 
 #define CC5_BUTTON_POWER 1
 #define CC5_BUTTON_POWER_READ PINB

@@ -126,12 +126,33 @@ bool cc5_is_button_pressed(int button) {
 	return false;
 }
 
+#define CC5_LONGPRESS_DELAY 10
 bool cc5_is_button_longpressed(int button) {
+	static uint8_t b1 = 0, b2 = 0;
+	uint8_t t = timing_counter(1);
 	switch (button) {
 		case CC5_BUTTON_MODE:
-			return !(CC5_BUTTON_MODE_READ & (1 << CC5_BUTTON_MODE_PIN));
+			if (!(CC5_BUTTON_MODE_READ & (1 << CC5_BUTTON_MODE_PIN))) {
+				if (b1 == 0) {
+					b1 = t;
+				}
+				if ((uint8_t)(t - b1) > CC5_LONGPRESS_DELAY) {
+					return true;
+				}
+			} else {
+				b1 = t;
+			}
 		case CC5_BUTTON_POWER:
-			return !(CC5_BUTTON_POWER_READ & (1 << CC5_BUTTON_POWER_PIN));
+			if (!(CC5_BUTTON_POWER_READ & (1 << CC5_BUTTON_POWER_PIN))) {
+				if (b2 == 0) {
+					b2 = t;
+				}
+				if ((uint8_t)(t - b2) > CC5_LONGPRESS_DELAY) {
+					return true;
+				}
+			} else {
+				b2 = t;
+			}
 	}
 
 	return false;
